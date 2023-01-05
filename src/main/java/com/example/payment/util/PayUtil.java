@@ -13,7 +13,7 @@ import java.util.Iterator;
 
 public class PayUtil {
     //server to server 통신
-    public String connectToServer(String data, String reqUrl) throws Exception{
+    public static String connectToServer(String data, String reqUrl) throws Exception{
         HttpURLConnection conn 		= null;
         BufferedReader resultReader = null;
         PrintWriter pw 				= null;
@@ -76,7 +76,7 @@ public class PayUtil {
     }
 
     //JSON String -> HashMap 변환
-    private static HashMap jsonStringToHashMap(String str) throws Exception{
+    public static HashMap jsonStringToHashMap(String str) throws Exception{
         HashMap dataMap = new HashMap();
         JSONParser parser = new JSONParser();
         try{
