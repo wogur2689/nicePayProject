@@ -2,7 +2,6 @@ package com.example.payment.controller;
 
 import com.example.payment.util.DataEncrypt;
 import com.example.payment.util.OrderUtil;
-import com.example.payment.util.PayUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -10,10 +9,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.example.payment.util.OrderUtil.getyyyyMMddHHmmss;
+import static com.example.payment.util.PayUtil.connectToServer;
+import static com.example.payment.util.PayUtil.jsonStringToHashMap;
 
 @Slf4j
 @Controller
@@ -69,7 +71,7 @@ public class MainController {
     }
 
     @PostMapping("/callBack")
-    public String payResult(HttpServletRequest request, Model model) throws Exception {
+    public String payCancelResult(HttpServletRequest request, Model model) throws Exception {
         request.setCharacterEncoding("utf-8");
         /*
          ****************************************************************************************
@@ -132,7 +134,7 @@ public class MainController {
             requestData.append("CharSet=").append("utf-8").append("&");
             requestData.append("SignData=").append(signData);
 
-            resultJsonStr = PayUtil.connectToServer(requestData.toString(), nextAppURL);
+            resultJsonStr = connectToServer(requestData.toString(), nextAppURL);
 
             HashMap resultData = new HashMap();
             boolean paySuccess = false;
@@ -140,16 +142,16 @@ public class MainController {
                 /* <망취소 요청> 승인 통신중에 Exception 발생시 망취소 처리를 권고합니다.*/
                 StringBuffer netCancelData = new StringBuffer();
                 requestData.append("&").append("NetCancel=").append("1");
-                String cancelResultJsonStr = PayUtil.connectToServer(requestData.toString(), netCancelURL);
+                String cancelResultJsonStr = connectToServer(requestData.toString(), netCancelURL);
 
-                HashMap cancelResultData = PayUtil.jsonStringToHashMap(cancelResultJsonStr);
+                HashMap cancelResultData = jsonStringToHashMap(cancelResultJsonStr);
                 ResultCode = (String)cancelResultData.get("ResultCode");
                 ResultMsg = (String)cancelResultData.get("ResultMsg");
                 /*Signature = (String)cancelResultData.get("Signature");
                 String CancelAmt = (String)cancelResultData.get("CancelAmt");
                 paySignature = sha256Enc.encrypt(TID + mid + CancelAmt + merchantKey);*/
             }else{
-                resultData = PayUtil.jsonStringToHashMap(resultJsonStr);
+                resultData = jsonStringToHashMap(resultJsonStr);
                 ResultCode 	= (String)resultData.get("ResultCode");	// 결과코드 (정상 결과코드:3001)
                 ResultMsg 	= (String)resultData.get("ResultMsg");	// 결과메시지
                 PayMethod 	= (String)resultData.get("PayMethod");	// 결제수단
@@ -186,9 +188,72 @@ public class MainController {
 	System.out.println("인증 생성 Signature : " + authComparisonSignature);
     */
         model.addAttribute("code", ResultCode);
-        model.addAttribute("msg", ResultMsg);
+        model.addAttribute("ResultMsg", ResultMsg);
         model.addAttribute("PayMethod", payMethod);
-        model.addAttribute("Amt", amt);
+        model.addAttribute("Amt", Amt);
+        model.addAttribute("TID", TID);
         return "/return";
+    }
+
+    @PostMapping("/cancelCallBack")
+    public String payResult(HttpServletRequest request, Model model) throws Exception {
+        request.setCharacterEncoding("utf-8");
+        /* <취소요청 파라미터> */
+        String tid = (String) request.getParameter("TID");    // 거래 ID
+        String cancelAmt = (String) request.getParameter("CancelAmt");    // 취소금액
+        String partialCancelCode = (String) request.getParameter("PartialCancelCode");    // 부분취소여부
+        String mid = "nicepay00m";    // 상점 ID
+        String moid = "nicepay_api_3.0_test";    // 주문번호
+        String cancelMsg = "고객요청";    // 취소사유
+
+        /* <해쉬암호화> SHA-256 해쉬암호화는 거래 위변조를 막기위한 방법입니다. */
+        DataEncrypt sha256Enc = new DataEncrypt();
+        String merchantKey = "EYzu8jGGMfqaDEp76gSckuvnaHHu+bC4opsSN6lHv3b2lurNYkVXrZ7Z1AoqQnXI3eLuaUFyoRNC6FkrzVjceg=="; // 상점키
+        String ediDate = getyyyyMMddHHmmss();
+        String signData = sha256Enc.encrypt(mid + cancelAmt + ediDate + merchantKey);
+
+        /* <취소 요청> 취소에 필요한 데이터 생성 후 server to server 통신을 통해 취소 처리 합니다.
+         취소 사유(CancelMsg) 와 같이 한글 텍스트가 필요한 파라미터는 euc-kr encoding 처리가 필요합니다. */
+        StringBuffer requestData = new StringBuffer();
+        requestData.append("TID=").append(tid).append("&");
+        requestData.append("MID=").append(mid).append("&");
+        requestData.append("Moid=").append(moid).append("&");
+        requestData.append("CancelAmt=").append(cancelAmt).append("&");
+        requestData.append("CancelMsg=").append(URLEncoder.encode(cancelMsg, "euc-kr")).append("&");
+        requestData.append("PartialCancelCode=").append(partialCancelCode).append("&");
+        requestData.append("EdiDate=").append(ediDate).append("&");
+        requestData.append("CharSet=").append("utf-8").append("&");
+        requestData.append("SignData=").append(signData);
+        String resultJsonStr = connectToServer(requestData.toString(), "https://webapi.nicepay.co.kr/webapi/cancel_process.jsp");
+
+        /* <취소 결과 파라미터 정의> */
+        String ResultCode 	= ""; String ResultMsg 	= ""; String CancelAmt 	= "";
+        String CancelDate 	= ""; String CancelTime = ""; String TID 		= ""; String Signature = "";
+
+        /* Signature : 요청 데이터에 대한 무결성 검증을 위해 전달하는 파라미터로 허위 결제 요청 등 결제 및 보안 관련 이슈가 발생할 만한 요소를 방지하기 위해 연동 시 사용하시기 바라며
+         * 위변조 검증 미사용으로 인해 발생하는 이슈는 당사의 책임이 없음 참고하시기 바랍니다.
+         */
+//String Signature = ""; String cancelSignature = "";
+
+        if("9999".equals(resultJsonStr)){
+            ResultCode 	= "9999";
+            ResultMsg	= "통신실패";
+        }else{
+            HashMap resultData = jsonStringToHashMap(resultJsonStr);
+            ResultCode 	= (String)resultData.get("ResultCode");	// 결과코드 (취소성공: 2001, 취소성공(LGU 계좌이체):2211)
+            ResultMsg 	= (String)resultData.get("ResultMsg");	// 결과메시지
+            CancelAmt 	= (String)resultData.get("CancelAmt");	// 취소금액
+            CancelDate 	= (String)resultData.get("CancelDate");	// 취소일
+            CancelTime 	= (String)resultData.get("CancelTime");	// 취소시간
+            TID 		= (String)resultData.get("TID");		// 거래아이디 TID
+            //Signature       	= (String)resultData.get("Signature");
+            //cancelSignature = sha256Enc.encrypt(TID + mid + CancelAmt + merchantKey);
+        }
+        model.addAttribute("ResultMsg", ResultMsg);
+        model.addAttribute("CancelAmt", CancelAmt);
+        model.addAttribute("CancelDate", CancelDate);
+        model.addAttribute("CancelTime", CancelTime);
+
+        return "/cancelReturn";
     }
 }
