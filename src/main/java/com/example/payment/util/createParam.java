@@ -1,6 +1,6 @@
 package com.example.payment.util;
 
-import static kr.co.nicevan.pg.common.TimeUtils.getyyyyMMddHHmmss;
+import static com.example.payment.util.OrderUtil.getyyyyMMddHHmmss;
 
 public class createParam {
     /*

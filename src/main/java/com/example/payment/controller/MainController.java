@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
-import static kr.co.nicevan.pg.common.TimeUtils.getyyyyMMddHHmmss;
+import static com.example.payment.util.OrderUtil.getyyyyMMddHHmmss;
 
 @Slf4j
 @Controller
@@ -37,12 +37,12 @@ public class MainController {
         String payMethod = "CARD";                      // 결제수단
         String merchantKey = "EYzu8jGGMfqaDEp76gSckuvnaHHu+bC4opsSN6lHv3b2lurNYkVXrZ7Z1AoqQnXI3eLuaUFyoRNC6FkrzVjceg=="; //상점 키
         String merchantID = "nicepay00m";                   // 상점 id
-        String price 	  = "1004"; 						// 결제상품금액
+        String price 	  = "100"; 						    // 결제상품금액
         String buyerName  = "테스트"; 						// 구매자명
         String buyerTel   = "01000000000"; 				    // 구매자연락처
         String buyerEmail = "happy@day.co.kr"; 			    // 구매자메일주소
         String moid 	  = orderNumber; 			        // 상품주문번호
-        String returnURL  = "http://localhost:8080/return.jsp"; //결과페이지(절대경로)
+        String returnURL  = "http://localhost:8080/callback"; //결과페이지(절대경로)
 
         /*
          * <해쉬암호화> (수정금지) -  SHA-256 해쉬암호화는 거래 위변조를 막기위한 방법
@@ -52,19 +52,19 @@ public class MainController {
         String signData         = sha256Enc.encrypt(ediDate + merchantID + price + merchantKey); //위변조 검증 데이터
 
         /* 3. 결제 요청 데이터 페이지에 내려주기*/
-        payData.put("payMethod", payMethod);
-        payData.put("merchantKey", merchantKey);
-        payData.put("merchantID", merchantID);
-        payData.put("price", price);
-        payData.put("buyerName", buyerName);
-        payData.put("buyerTel", buyerTel);
-        payData.put("buyerEmail", buyerEmail);
-        payData.put("moid", moid);
-        payData.put("returnURL", returnURL);
-        payData.put("ediDate", ediDate);
-        payData.put("signData", signData);
+        model.addAttribute("payMethod", payMethod);
+        model.addAttribute("merchantKey", merchantKey);
+        model.addAttribute("merchantID", merchantID);
+        model.addAttribute("price", price);
+        model.addAttribute("buyerName", buyerName);
+        model.addAttribute("buyerTel", buyerTel);
+        model.addAttribute("buyerEmail", buyerEmail);
+        model.addAttribute("moid", moid);
+        model.addAttribute("returnURL", returnURL);
+        model.addAttribute("ediDate", ediDate);
+        model.addAttribute("signData", signData);
 
-        model.addAttribute("payData", payData);
+
         return "index";
     }
 
@@ -88,7 +88,7 @@ public class MainController {
         String reqReserved 		= request.getParameter("ReqReserved"); 		// 상점 예약필드
         String netCancelURL 	= request.getParameter("NetCancelURL"); 	    // 망취소 요청 URL
         // String authSignature = (String)request.getParameter("Signature");	    // Nicepay에서 내려준 응답값의 무결성 검증 Data
-
+        log.info("### AuthResultCode {}, AuthResultMsg {} ###", authResultCode, authResultMsg);
         /*
          ****************************************************************************************
          * Signature : 요청 데이터에 대한 무결성 검증을 위해 전달하는 파라미터로 허위 결제 요청 등 결제 및 보안 관련 이슈가 발생할 만한 요소를 방지하기 위해 연동 시 사용하시기 바라며
@@ -114,29 +114,15 @@ public class MainController {
         String GoodsName 	= ""; String Amt 		= ""; String TID 		= "";
         // String Signature = ""; String paySignature = "";
 
-        /*
-         ****************************************************************************************
-         * <인증 결과 성공시 승인 진행>
-         ****************************************************************************************
-         */
+        /* <인증 결과 성공시 승인 진행> */
         String resultJsonStr = "";
         if(authResultCode.equals("0000")){
 
-            /*
-             ****************************************************************************************
-             * <해쉬암호화> (수정하지 마세요)
-             * SHA-256 해쉬암호화는 거래 위변조를 막기위한 방법입니다.
-             ****************************************************************************************
-             */
+            /* <해쉬암호화> SHA-256 해쉬암호화는 거래 위변조를 막기위한 방법입니다.*/
             String ediDate			= getyyyyMMddHHmmss();
             String signData 		= sha256Enc.encrypt(authToken + mid + amt + ediDate + merchantKey);
 
-            /*
-             ****************************************************************************************
-             * <승인 요청>
-             * 승인에 필요한 데이터 생성 후 server to server 통신을 통해 승인 처리 합니다.
-             ****************************************************************************************
-             */
+            /* <승인 요청>승인에 필요한 데이터 생성 후 server to server 통신을 통해 승인 처리 합니다. */
             StringBuffer requestData = new StringBuffer();
             requestData.append("TID=").append(txTid).append("&");
             requestData.append("AuthToken=").append(authToken).append("&");
@@ -151,12 +137,7 @@ public class MainController {
             HashMap resultData = new HashMap();
             boolean paySuccess = false;
             if("9999".equals(resultJsonStr)){
-                /*
-                 *************************************************************************************
-                 * <망취소 요청>
-                 * 승인 통신중에 Exception 발생시 망취소 처리를 권고합니다.
-                 *************************************************************************************
-                 */
+                /* <망취소 요청> 승인 통신중에 Exception 발생시 망취소 처리를 권고합니다.*/
                 StringBuffer netCancelData = new StringBuffer();
                 requestData.append("&").append("NetCancel=").append("1");
                 String cancelResultJsonStr = PayUtil.connectToServer(requestData.toString(), netCancelURL);
@@ -180,11 +161,7 @@ public class MainController {
                 /*Signature = (String)resultData.get("Signature");
                 paySignature = sha256Enc.encrypt(TID + mid + Amt + merchantKey);*/
 
-                /*
-                 *************************************************************************************
-                 * <결제 성공 여부 확인>
-                 *************************************************************************************
-                 */
+                /* <결제 성공 여부 확인> */
                 if(PayMethod != null){
                     if(PayMethod.equals("CARD")){
                         if(ResultCode.equals("3001")) paySuccess = true; // 신용카드(정상 결과코드:3001)
@@ -208,6 +185,10 @@ public class MainController {
 	System.out.println("인증 응답 Signature : " + authSignature);
 	System.out.println("인증 생성 Signature : " + authComparisonSignature);
     */
+        model.addAttribute("code", ResultCode);
+        model.addAttribute("msg", ResultMsg);
+        model.addAttribute("PayMethod", payMethod);
+        model.addAttribute("Amt", amt);
         return "/return";
     }
 }

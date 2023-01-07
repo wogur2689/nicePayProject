@@ -1,8 +1,5 @@
 <%@ page contentType="text/html; charset=utf-8"%>
-<%@ page import="java.util.Date" %>
-<%@ page import="java.text.SimpleDateFormat" %>
-<%@ page import="java.security.MessageDigest" %>
-<%@ page import="org.apache.commons.codec.binary.Hex" %>-
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -16,7 +13,7 @@
     <script src="https://web.nicepay.co.kr/v3/webstd/js/nicepay-3.0.js" type="text/javascript"></script>
 </head>
 <body>
-<form name="payForm" method="post" action="return.jsp" accept-charset="euc-kr">
+<form name="payForm" method="post" action="/callBack" accept-charset="euc-kr">
     <table>
         <tr>
             <th><span>결제 수단</span></th>
@@ -28,31 +25,31 @@
         </tr>
         <tr>
             <th><span>결제 상품금액</span></th>
-            <td><input type="text" name="Amt" value="<%=price%>"></td>
+            <td><input type="text" name="Amt" value="${price}"></td>
         </tr>
         <tr>
             <th><span>상점 아이디</span></th>
-            <td><input type="text" name="MID" value="<%=merchantID%>"></td>
+            <td><input type="text" name="MID" value="${merchantID}"></td>
         </tr>
         <tr>
             <th><span>상품 주문번호</span></th>
-            <td><input type="text" name="Moid" value="<%=moid%>"></td>
+            <td><input type="text" name="Moid" value="${moid}"></td>
         </tr>
         <tr>
             <th><span>구매자명</span></th>
-            <td><input type="text" name="BuyerName" value="<%=buyerName%>"></td>
+            <td><input type="text" name="BuyerName" value="${buyerName}"></td>
         </tr>
         <tr>
             <th>구매자명 이메일</th>
-            <td><input type="text" name="BuyerEmail" value="<%=buyerEmail%>"></td>
+            <td><input type="text" name="BuyerEmail" value="${buyerEmail}"></td>
         </tr>
         <tr>
             <th><span>구매자 연락처</span></th>
-            <td><input type="text" name="BuyerTel" value="<%=buyerTel%>"></td>
+            <td><input type="text" name="BuyerTel" value="${buyerTel}"></td>
         </tr>
         <tr>
             <th><span>인증완료 결과처리 URL<!-- (모바일 결제창 전용)PC 결제창 사용시 필요 없음 --></span></th>
-            <td><input type="text" name="ReturnURL" value="<%=returnURL%>"></td>
+            <td><input type="text" name="ReturnURL" value="${returnURL}"></td>
         </tr>
         <tr>
             <th>가상계좌입금만료일(YYYYMMDD)</th>
@@ -66,8 +63,8 @@
         <input type="hidden" name="ReqReserved" value=""/>					<!-- 상점 예약필드 -->
 
         <!-- 변경 불가능 -->
-        <input type="hidden" name="EdiDate" value="<%=ediDate%>"/>			<!-- 전문 생성일시 -->
-        <input type="hidden" name="SignData" value="<%=signData%>"/>	<!-- 해쉬값 -->
+        <input type="hidden" name="EdiDate" value="${ediDate}"/>			<!-- 전문 생성일시 -->
+        <input type="hidden" name="SignData" value="${signData}"/>	<!-- 해쉬값 -->
     </table>
     <a href="#" class="btn_blue" onClick="nicepayStart();">요 청</a>
 </form>
