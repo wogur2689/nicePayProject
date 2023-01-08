@@ -66,7 +66,6 @@ public class MainController {
         model.addAttribute("ediDate", ediDate);
         model.addAttribute("signData", signData);
 
-
         return "index";
     }
 
@@ -179,6 +178,7 @@ public class MainController {
                         if(ResultCode.equals("0000")) paySuccess = true; // 계좌간편결제(정상 결과코드:0000)
                     }
                 }
+                log.info("### paySuccess {} ###", paySuccess);
             }
         }else/*if(authSignature.equals(authComparisonSignature))*/{
             ResultCode 	= authResultCode;
@@ -187,6 +187,7 @@ public class MainController {
 	System.out.println("인증 응답 Signature : " + authSignature);
 	System.out.println("인증 생성 Signature : " + authComparisonSignature);
     */
+        log.info("### 결제결과 {} ###", ResultMsg);
         model.addAttribute("code", ResultCode);
         model.addAttribute("ResultMsg", ResultMsg);
         model.addAttribute("PayMethod", payMethod);
@@ -249,6 +250,7 @@ public class MainController {
             //Signature       	= (String)resultData.get("Signature");
             //cancelSignature = sha256Enc.encrypt(TID + mid + CancelAmt + merchantKey);
         }
+        log.info("### 취소결과 {} ###", ResultMsg);
         model.addAttribute("ResultMsg", ResultMsg);
         model.addAttribute("CancelAmt", CancelAmt);
         model.addAttribute("CancelDate", CancelDate);

@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>NICEPAY PAY REQUEST(UTF-8)</title>
+    <title>결제요청 NICEPAY</title>
     <meta charset="utf-8">
     <style>
         html,body {height: 100%;}

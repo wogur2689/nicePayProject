@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>NICEPAY PAY RESULT(UTF-8)</title>
+    <title>결제결과 및 취소요청</title>
     <meta charset="utf-8">
 </head>
 <body>
